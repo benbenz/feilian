@@ -251,8 +251,8 @@ $accuracy=\frac{True Positives}{True Positives + False Positives + False Negativ
     \hline
     \textbf{Model} & \textbf{Accuracy} & \textbf{Precision} & \textbf{Recall} & \textbf{F1} & \textbf{Correct} & \textbf{Precision} & \textbf{Recall} & \textbf{F1}\\ \hline
     \multicolumn{5}{|c|}{\cellcolor{yellow!30}Xpath Agent} & \multicolumn{4}{|c|}{\cellcolor{cyan!20} Auto Scraper}\\ \hline
-    Deepseek V2.4       & 0.6312 & 0.7484 & 0.8012 & 0.7739       & & & &  \\
-    DeepSeek V2.5       & 0.5794 & 0.6764 & 0.8017 & 0.7337       & & & & \\ 
+    Deepseek V2.4       & 0.6312 & 0.7484 & 0.8012 & 0.7739       & & & & \\
+    Deepseek V2.5       & 0.5794 & 0.6764 & 0.8017 & 0.7337       & & & & \\
     GPT 4o mini         & 0.6613 & 0.8056 & 0.7868 & 0.7961       & 0.6206 & 0.9176 & 0.7810 & 0.7697 \\
     GPT 4o              &\textbf{0.7413} &\textbf{0.8561} &0.8467 &\textbf{0.8514}            & & & & \\
     GPT 3.5 Turbo       & & & &                                   & 0.5484 & 0.8585 & 0.7334 & 0.6920 \\
@@ -270,7 +270,11 @@ $accuracy=\frac{True Positives}{True Positives + False Positives + False Negativ
   \caption{Experimental Results}
 \end{table*}
     
-DeepSeek is strong in precision, making it good at avoiding irrelevant data. GPT 4o is highly effective at capturing a wide range of relevant content, ensuring that few important elements are missed. Claude 3.0 strikes a balanced approach, effectively combining both precision and recall for solid overall performance of F1 score. Claude 3.5 stands out as the most balanced and effective model, excelling across all key areas of accuracy, precision, recall, and overall performance. It provides the best mix of identifying relevant data while minimizing errors.
+GPT 4o emerges as the most effective model among the XPath Agent group, excelling in accuracy, precision, recall, and F1 score, ensuring comprehensive and reliable data extraction. GPT 4o mini follows closely, offering strong precision and recall for balanced performance.
+
+DeepSeek models, particularly V2.4, demonstrate high precision, making them adept at filtering irrelevant data. However, their recall and overall F1 scores suggest a trade-off, indicating a focus on precision at the expense of missing some relevant content. These models are well-suited for tasks prioritizing accuracy over generalization.
+
+Claude 3 variants are consistent performers with strong recall and balanced precision, suitable for versatile extraction needs. In contrast, Gemini 1.5 flash shows the weakest performance, making it less effective for comprehensive tasks.
     
 
 \subsection{Comparative Analysis} 
@@ -283,6 +287,11 @@ In comparison to XPath Agent, AutoCrawler presents a different approach, emphasi
 AutoCrawler's focus on refining action sequences based on learning from past errors might offer advantages in terms of robustness 
 and adaptability to dynamic web structures. However, your XPath Agent, by isolating XPath extraction tasks, might achieve greater 
 precision in structured environments where precise element identification is crucial.
+
+The XPath Agent framework demonstrates strong performance as a balanced solution for web data extraction. With models like GPT 4o achieving 
+the highest accuracy (0.7413) and F1 score (0.8514), it consistently balances precision and recall, making it well-suited for versatile 
+applications. While Auto Scraper excels in precision and recall with models like GPT 4.0 Turbo, it often sacrifices accuracy and F1 scores, 
+indicating a less balanced approach. Overall, XPath Agent offers a reliable option for tasks requiring both precision and comprehensiveness.
 
 \subsection{Error Analysis} TODO
 
