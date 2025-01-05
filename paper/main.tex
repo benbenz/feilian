@@ -1,7 +1,8 @@
-% !TEX root = C:\Users\xilua\My Drive\Workspace\llm_xpath\feilian\paper\main.tex
 \documentclass[a4paper]{article}
 \usepackage{graphicx}
 \usepackage{twocolceurws}
+\usepackage{amsmath}
+\usepackage{amssymb}
 \usepackage[ruled,vlined]{algorithm2e}
 \usepackage{adjustbox}
 \usepackage{caption} % 引入 caption 包
@@ -10,11 +11,12 @@
 \usepackage{listings}
 \usepackage[utf8]{inputenc}
 \usepackage{colortbl}
+\usepackage[backend=biber,style=numeric]{biblatex}
+\usepackage{wrapfig}
 
-\bibliographystyle{plain} 
-% \setcitestyle{authoryear,open={(},close={)}}
+
+\addbibresource{refs.bib}
 \captionsetup[figure]{skip=10pt} % 设置 caption 的下边距为 10pt
-
 
 \title{XPath Agent: An Efficient XPath Programming Agent Based on LLM for Web Crawler}
 
@@ -33,7 +35,7 @@ Xinyu Luan \\ \\ xinyuluan0320@gmail.com
 \maketitle
 
 \begin{abstract}
-  We present XPath Agent, a production-ready XPath programming agent specifically designed for web crawling and web GUI testing. A key feature of XPath Agent is its ability to automatically generate XPath queries from a set of sampled web pages using a single natural language query. To demonstrate its effectiveness, we benchmark XPath Agent against a state-of-the-art XPath programming agent across a range of web crawling tasks. Our results show that XPath Agent achieves comparable performance metrics while significantly reducing token usage and improving clock-time efficiency. The well-designed two-stage pipeline allows for seamless integration into existing web crawling or web GUI testing workflows, thereby saving time and effort in manual XPath query development. The source code for XPath Agent is available at \url{https://github.com/eavae/feilian}.
+We present XPath Agent, a production-ready XPath programming agent specifically designed for web crawling and web GUI testing. A key feature of XPath Agent is its ability to automatically generate XPath queries from a set of sampled web pages using a single natural language query. To demonstrate its effectiveness, we benchmark XPath Agent against a state-of-the-art XPath programming agent across a range of web crawling tasks. Our results show that XPath Agent achieves comparable performance metrics while significantly reducing token usage and improving clock-time efficiency. The well-designed two-stage pipeline allows for seamless integration into existing web crawling or web GUI testing workflows, thereby saving time and effort in manual XPath query development. The source code for XPath Agent is available at \url{https://github.com/eavae/feilian}.
 \end{abstract}
 
 \section{Introduction}
@@ -79,6 +81,15 @@ Generative approaches further demonstrate the adaptability of LLMs in WebIE. Cha
 
 On the multimodal front, models like GoLLIE \cite{sainz2024gollieannotationguidelinesimprove} and MoEEF \cite{yang2024hypertextentityextractionwebpage} integrate visual and textual data to address domain-specific challenges. GoLLIE aligns annotation guidelines with code generation for better extractions, while MoEEF incorporates hypertext features to boost entity recognition. Vision-based LLMs, such as GPT-4 Vision\cite{fellman-etal-2024-future}, highlight the growing importance of multimodal techniques for processing visually encoded web data.
 
+\begin{figure*}[h]
+  \centering
+  \includegraphics[width=1\textwidth]{./workflow.png}
+  \caption{XPath Agent of two stages pipeline. The first stage is Information Extraction, which extracts target information and cue text from sanitized web pages (the red are sanitized). The second stage is XPath Programming, which generates XPath queries based on condensed html (the greens are target nodes) and generated XPath.}
+  \label{fig:workflow}
+  \vspace{20pt} % 手动插入 20pt 的垂直间距
+\end{figure*}
+
+
 \subsection{LLMs and XPaths for Web Information Extraction}
 
 XPath, a language for querying hierarchical document structures, plays a vital role in bridging structured representation with computational modeling. MarkupLM\cite{DBLP:journals/corr/abs-2110-08518} demonstrates how XPath captures the genealogy of DOM nodes, seamlessly integrating textual and markup features for tasks such as Masked Markup Language Modeling (MMLM) and Node Relation Prediction (NRP). These techniques enable dynamic adaptation to complex web layouts, surpassing the limitations of 2D positional embeddings.
@@ -89,13 +100,6 @@ XPath generation further extends WebIE capabilities. Tools like TREEX \cite{10.1
 
 The evolution of WebIE reflects the integration of structural, multimodal, and generative techniques into scalable systems. LLMs and frameworks leveraging DOM structures, multimodal data, and XPath queries have significantly advanced this field, enabling robust and adaptable solutions for dynamic web environments. These advancements collectively highlight the transformative potential of combining pre-trained models, structural embeddings, and domain-specific optimizations in tackling modern WebIE challenges. Future directions should focus on enhancing generalization across unseen web domains and improving multimodal fusion for visually rich webpages efficiently.
 
-\begin{figure*}[h]
-  \centering
-  \includegraphics[width=1\textwidth]{./workflow.png}
-  \caption{XPath Agent of two stages pipeline. The first stage is Information Extraction, which extracts target information and cue text from sanitized web pages (the red are sanitized). The second stage is XPath Programming, which generates XPath queries based on condensed html (the greens are target nodes) and generated XPath.}
-  \label{fig:workflow}
-  \vspace{20pt} % 手动插入 20pt 的垂直间距
-\end{figure*}
 
 \section{Methodology}
 
@@ -120,33 +124,39 @@ The algorithm 1 traverse the HTML tree in a depth-first manner. It removes the i
 
 In our implementation, we prompt LLM to extract all information at once on a single page with JSON format. So, multiple fields or multiple values for a single field might be extracted. We treat all extracted values are relevant and passing them to the next stage. The prompt for the Information Extraction stage is shown in Section \ref{sec:ie_prompt}.
 
-
-\begin{algorithm}
+\begin{algorithm*}[h]
   \SetAlgoLined
   \caption{IE HTML Sanitizer}
   \label{alg:sanitizer}
-  \KwIn{Root node of HTML tree $root\_node$}
-  \KwOut{Sanitized HTML tree}
+  \KwIn{HTML tree $T$ with root node $r$}
+  \KwOut{Sanitized HTML tree $T'$}
   
-  $left\_stack \gets [root\_node]$\;
-  $right\_stack \gets []$\;
+  \textbf{Data Structures:}
+  $L \gets [r]$,
+  $R \gets \emptyset$
   
-  \While{$left\_stack$ is not empty}{
-      $node \gets left\_stack.pop()$\;
-      $right\_stack.append(node)$\;
-      $left\_stack \gets left\_stack + list(node.iterchildren())$\;
-  }
-  
-  \While{$right\_stack$ is not empty}{
-      $node \gets right\_stack.pop()$\;
-      \If{$is\_invisiable\_or\_no\_text(node)$}{
-          $node.getparent().remove(node)$\;
-      }
-      \Else{
-          $node.remove\_attributes()$\;
+  \While{$L \neq \emptyset$}{
+      $v \gets \text{pop}(L)$
+
+      $\text{push}(R, v)$
+
+      \ForEach{child $u$ of $v$}{
+          $\text{push}(L, u)$
       }
   }
-\end{algorithm}
+  
+  \While{$R \neq \emptyset$}{
+      $v \gets \text{pop}(R)$
+
+      \eIf{$\text{is\_invisible\_or\_no\_text}(v)$}{
+          $\text{remove}(v)$
+      }{
+          $\text{remove\_attributes}(v)$
+      }
+  }
+
+  \textbf{Return} $T'$
+\end{algorithm*}
 
 \subsection{Program XPath}
 
@@ -161,6 +171,48 @@ Program a robust XPath query is a challenging task. Which requires to balance be
 
 The static XPath generation algorithm propagate from the target node to root node. It generates the XPath query in a bottom-up manner. Unlike naive XPath generation algorithm. We add more attributes (in our case, we include class and id) to the XPath query. It makes the XPath query richer.
 
+
+\begin{algorithm*}[h]
+  \SetAlgoLined
+  \caption{HTML Condenser}
+  \label{alg:condenser}
+  \KwIn{
+      $T$: HTML tree with root node $r$\;
+      $\mathcal{T} = \{t_1, t_2, \dots, t_n\}$: Set of texts to preserve\;
+      $d: \mathcal{S} \times \mathcal{S} \to \mathbb{R}^+$: Distance function\;
+  }
+  \KwOut{
+      $T'$: Condensed HTML tree\;
+  }
+
+  $\mathcal{D} \gets \emptyset$ \tcp*{text $\to$ minimal distance}
+  $\mathcal{E} \gets \emptyset$ \tcp*{text $\to$ list of XPaths}
+  
+  \ForEach{$(v, s) \in \text{TextNodes}(T)$}{
+      $\delta \gets \infty$\;
+      \ForEach{$t \in \mathcal{T}$}{
+          $\delta' \gets d(s, t)$\;
+          \If{$\delta' < \delta$}{
+              $\delta \gets \delta'$\;
+              $\mathcal{D}[s] \gets \delta$\;
+              $\mathcal{E}[s] \gets \{\text{XPath}(v)\}$\;
+          }
+          \ElseIf{$\delta' = \delta$}{
+              $\mathcal{E}[s] \gets \mathcal{E}[s] \cup \{\text{XPath}(v)\}$\;
+          }
+      }
+  }
+
+  $\mathcal{X} \gets \bigcup_{s \in \mathcal{T}} \mathcal{E}[s]$  \tcp{Set of XPaths to preserve}
+  
+  \ForEach{$(p, v) \in \text{NodesWithXPath}(T)$}{
+      \If{$p \notin \mathcal{X}$}{
+          $\text{RemoveChildren}(v)$\;
+          $\text{ReplaceText}(v, \text{"..."})$\;
+      }
+  }
+\end{algorithm*}
+
 \subsection{Conversational XPath Evaluator}
 
 LLM are lacks of the environment to evaluate, correct or improve the XPath queries. So, we designed a evaluator to evaluate LLM generated XPath.
@@ -170,79 +222,6 @@ The XPath evaluator is a function, which execute the XPath query on seeded web p
 In our implementation, we limited the number of feedback loop to 3. At the end of the loop, we take the best XPath query based on evaluation result as the final result. The prompt for the Program XPath stage is shown in Section \ref{sec:program_xpath_prompt}.
 
 
-\begin{algorithm}
-  \SetAlgoLined
-  \caption{HTML Condenser}
-  \label{alg:condenser}
-  \KwIn{
-      $root$: HTML root node\;
-      $target\_texts$: List of target texts to keep\;
-      $d$: Distance function between two texts\;
-  }
-  \KwOut{
-      $root$: Condensed HTML root node\;
-  }
-  
-  $target\_texts \gets []$\;
-  $distances \gets \{\}$\;
-  $eles \gets \{\}$\;
-  
-  \ForEach{$ele, text$ in \texttt{iter\_with\_text}($root$)}{
-      \ForEach{$target\_text$ in $target\_texts$}{
-          $distance \gets d(text, target\_text)$\;
-          \If{$distance < distances[text]$}{
-              $distances[text] \gets distance$\;
-              $eles[text] \gets [\texttt{get\_xpath}($ele$)]$\;
-          }
-          \ElseIf{$distance == distances[text]$}{
-              $eles[text].\texttt{append}(\texttt{get\_xpath}($ele$))$\;
-          }
-      }
-  }
-
-  $targets \gets \texttt{concat}(\texttt{values}(eles))$\;
-  \ForEach{$xpath, ele$ in \texttt{iter\_with\_xpath}($root$)}{
-    \If{\texttt{is\_outside}($xpath$, $targets$)}{
-      \texttt{remove\_children}(ele)\;
-      \texttt{replace\_text\_to}(ele, "...")\;
-    }
-  }
-
-\end{algorithm}
-
-
-\section{Experiments }
-
-\subsection{Experimental Setup}
-
-\subsubsection{Models}
-We use DeepSeek and ChatGPT-4.0 as the primary large language models in our experiments.
-
-\subsubsection{Dataset}
-We use the SWDE\cite{abdin2024phi3technicalreporthighly} (Structured Web Data Extraction) dataset, which includes 90 of websites across 9 domains, in total 20414 web pages.
-
-\subsubsection{Experimental Parameters}
-We use DeepSeek-Chat as the main model for our XPath Agent. The Number of Seeds is 3 initial seeds are provided to guide query generation with a  
-sample size of 32 web pages are sampled per task to evaluate the model’s adaptability and generalizability. 
-
-\subsection{Evaluation Metrics}
-For evaluation, we employ the metrics of precision, recall, F1 score, and accuracy. we utilized a set matching method to calculate the metrics 
-for multi-label classification tasks where the labels are unordered. 
-This involves comparing each predicted label set with the corresponding ground truth label set while disregarding the order of the labels. 
-First, Both the ground truth and predictions are converted into sets to ignore any order. Accuracy is then defined such that a prediction is 
-counted as correct if the predicted set exactly matches the ground truth set. We count correctly predicted labels as True Positives. 
-Incorrectly predicted labels that are not in ground truth are classified as False Positives, while the labels that should have been in predicted set 
-but were missed are designated as False Negatives. Additionally, since our data does not contain blank answers (with only a very few exceptions that have been removed), 
-our cases do not have true negatives. Finally, precision, recall, F1 score, and accuracy are calculated by the following formula.
-\begin{center}
-$presision=\frac{Ture Positives}{Ture Positives + False Positives}$\\ [0.3 cm]
-$recall=\frac{Ture Positives}{True Positives + False Negatives}$\\ [0.3 cm]
-$F1=\frac{2 \times precision \times recall}{precision + recall}$\\ [0.3 cm]
-$accuracy=\frac{True Positives}{True Positives + False Positives + False Negatives}$
-\end{center}
-
-\section{Results and Analysis}
-\subsection{Statistical Analysis}
 
 \begin{table*}[h]
   % \begin{center}
@@ -269,6 +248,40 @@ $accuracy=\frac{True Positives}{True Positives + False Positives + False Negativ
 
   \caption{Experimental Results}
 \end{table*}
+
+\section{Experiments }
+
+\subsection{Experimental Setup}
+
+\subsubsection{Models}
+We use DeepSeek and ChatGPT-4.0 as the primary large language models in our experiments.
+
+\subsubsection{Dataset}
+We use the SWDE \cite{abdin2024phi3technicalreporthighly} (Structured Web Data Extraction) dataset, which includes 90 of websites across 9 domains, in total 20414 web pages.
+
+\subsubsection{Experimental Parameters}
+We use DeepSeek-Chat as the main model for our XPath Agent. The Number of Seeds is 3 initial seeds are provided to guide query generation with a  
+sample size of 32 web pages are sampled per task to evaluate the model’s adaptability and generalizability. 
+
+\subsection{Evaluation Metrics}
+For evaluation, we employ the metrics of precision, recall, F1 score, and accuracy. we utilized a set matching method to calculate the metrics 
+for multi-label classification tasks where the labels are unordered. 
+This involves comparing each predicted label set with the corresponding ground truth label set while disregarding the order of the labels. 
+First, Both the ground truth and predictions are converted into sets to ignore any order. Accuracy is then defined such that a prediction is 
+counted as correct if the predicted set exactly matches the ground truth set. We count correctly predicted labels as True Positives. 
+Incorrectly predicted labels that are not in ground truth are classified as False Positives, while the labels that should have been in predicted set 
+but were missed are designated as False Negatives. Additionally, since our data does not contain blank answers (with only a very few exceptions that have been removed), 
+our cases do not have true negatives. Finally, precision, recall, F1 score, and accuracy are calculated by the following formula.
+\begin{center}
+$presision=\frac{Ture Positives}{Ture Positives + False Positives}$\\ [0.3 cm]
+$recall=\frac{Ture Positives}{True Positives + False Negatives}$\\ [0.3 cm]
+$F1=\frac{2 \times precision \times recall}{precision + recall}$\\ [0.3 cm]
+$accuracy=\frac{True Positives}{True Positives + False Positives + False Negatives}$
+\end{center}
+
+\section{Results and Analysis}
+\subsection{Statistical Analysis}
+
     
 GPT 4o emerges as the most effective model among the XPath Agent group, excelling in accuracy, precision, recall, and F1 score, ensuring comprehensive and reliable data extraction. GPT 4o mini follows closely, offering strong precision and recall for balanced performance.
 
@@ -293,24 +306,13 @@ the highest accuracy (0.7413) and F1 score (0.8514), it consistently balances pr
 applications. While Auto Scraper excels in precision and recall with models like GPT 4.0 Turbo, it often sacrifices accuracy and F1 scores, 
 indicating a less balanced approach. Overall, XPath Agent offers a reliable option for tasks requiring both precision and comprehensiveness.
 
-\subsection{Error Analysis} TODO
+\section{Conclusion}
 
+We present a novel approach, XPath Agent, for efficient XPath programming in web crawling tasks. Our two-stage pipeline leverages LLMs to extract target information and generate robust XPath queries, achieving comparable performance to state-of-the-art solutions while significantly reducing computational overhead. Key innovations include cue text extraction, HTML sanitization, and a conversational XPath evaluator that enables iterative refinement of queries. Our experiments demonstrate the effectiveness of XPath Agent across a range of web crawling tasks, highlighting its potential for seamless integration into existing workflows. Future work will focus on enhancing generalization and adaptability across diverse web domains, further improving the efficiency and accuracy of XPath programming.
 
+\clearpage
 
-\section{Conclusion }
-
-Third level headings must be flush left, initial caps and bold.
-One line space before the third level heading and $1/2$ line
-space after the third level heading.
-
-\paragraph{Fourth Level Heading}
-
-Fourth level headings must be flush left, initial caps and roman type.
-One line space before the fourth level heading and $1/2$ line
-space after the fourth level heading.
-
-% \addbibresource{refs.bib}
-\bibliography{refs}{}
+\printbibliography
 
 \clearpage
 \onecolumn
