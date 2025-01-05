@@ -9,7 +9,6 @@ from tqdm import tqdm
 from collections import defaultdict
 from minify_html import minify
 from langchain_openai.chat_models import ChatOpenAI
-#from langchain_anthropic.chat_models import ChatAnthropic
 from langchain_core.prompts import ChatPromptTemplate
 
 from feilian.soup_tools import get_node_contain_text, get_common_ancestor, clean_html
