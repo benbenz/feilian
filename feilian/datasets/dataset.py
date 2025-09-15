@@ -142,7 +142,7 @@ class SWDE(Dataset):
     def categories(self):
         # read categories
         categories = []
-        for path in (Path(self.data_folder) / "sourceCode" / "sourceCode").glob("*"):
+        for path in (Path(self.data_folder) / "webpages" ).glob("*"):
             dirname = path.name
             # if all lowercase name, then it is a category
             if dirname.islower() and "." not in dirname and dirname != "groundtruth":
@@ -160,7 +160,7 @@ class SWDE(Dataset):
             page_id = row["page_id"]
             pages = row["pages"]
 
-            html_path = os.path.join(self.data_folder, "sourceCode/sourceCode", category, f"{category}-{site}({pages})/{page_id}.htm")
+            html_path = os.path.join(self.data_folder, "webpages" , category, f"{category}-{site}({pages})/{page_id}.htm")
             with open(html_path, "r") as f:
                 html = f.read()
             htmls.append(html)
@@ -184,7 +184,7 @@ class SWDE(Dataset):
 
     def get_site_pages(self, category):
         sites = []
-        source_folder = os.path.join(self.data_folder, f"sourceCode/sourceCode/{category}")
+        source_folder = os.path.join(self.data_folder, f"webpages/{category}")
         for path in os.listdir(source_folder):
             path = path.split("-")[1]
             site = re.search(r"\w+", path).group()
@@ -193,7 +193,7 @@ class SWDE(Dataset):
         return sites
 
     def _get_ground_truth(self, category, site):
-        ground_truth_folder = os.path.join(self.data_folder, f"sourceCode/sourceCode/groundtruth/{category}")
+        ground_truth_folder = os.path.join(self.data_folder, f"groundtruth/{category}")
 
         df = pd.DataFrame()
         for file_path in Path(ground_truth_folder).rglob(f"{category}-{site}-*.txt"):
@@ -274,7 +274,7 @@ class SWDE(Dataset):
             page_id = row["page_id"]
             pages = row["pages"]
 
-            html_path = os.path.join(self.data_folder, "sourceCode/sourceCode", category, f"{category}-{site}({pages})/{page_id}.htm")
+            html_path = os.path.join(self.data_folder, "webpages", category, f"{category}-{site}({pages})/{page_id}.htm")
             with open(html_path, "r") as f:
                 html = f.read()
 
@@ -395,7 +395,7 @@ class SWDEExpanded(Dataset):
             page_id = row["page_id"]
             pages = row["pages"]
 
-            html_path = os.path.join(self.swde_data_folder, "sourceCode/sourceCode", category, f"{category}-{site}({pages})/{page_id}")
+            html_path = os.path.join(self.swde_data_folder, "webpages", category, f"{category}-{site}({pages})/{page_id}")
             ground_truth = json.loads(row["ground_truth"])
             instances.append(
                 Sample(
@@ -421,7 +421,7 @@ class SWDEExpanded(Dataset):
             page_id = row["page_id"]
             pages = row["pages"]
 
-            html_path = os.path.join(self.swde_data_folder, "sourceCode/sourceCode", category, f"{category}-{site}({pages})/{page_id}")
+            html_path = os.path.join(self.swde_data_folder, "webpages", category, f"{category}-{site}({pages})/{page_id}")
             with open(html_path, "r") as f:
                 html = f.read()
             htmls.append(html)

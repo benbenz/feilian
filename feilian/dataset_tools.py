@@ -97,8 +97,8 @@ def swde__read_ground_truth(root_folder: str, category: str, site: str) -> pd.Da
 
 # SWDE Dataset
 def swde__convert_to_parquet(root_folder: str, save_to: str):
-    ground_truth_folder = os.path.join(root_folder, "sourceCode/sourceCode/groundtruth")
-    html_folder = "sourceCode/sourceCode"
+    ground_truth_folder = os.path.join(root_folder, "groundtruth")
+    html_folder = "webpages"
     categories = []
 
     for x in os.listdir(ground_truth_folder):
